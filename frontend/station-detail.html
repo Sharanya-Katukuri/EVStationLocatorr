@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body class="container mt-4">
+
+<h3 id="name"></h3>
+<p id="address"></p>
+
+<a id="bookBtn" class="btn btn-primary">Book Slot</a>
+
+<script src="js/common.js"></script>
+<script>
+const id = new URLSearchParams(location.search).get("id");
+
+fetch(API_BASE + "stations/" + id + "/")
+.then(res => res.json())
+.then(s => {
+  name.innerText = s.name;
+  address.innerText = s.address;
+  bookBtn.href = "booking.html?station=" + id;
+});
+</script>
+
+</body>
+</html>
