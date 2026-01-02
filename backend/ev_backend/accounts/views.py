@@ -181,13 +181,16 @@ def update_profile(request):
 #adding new*****************************
 
 
-
+#02
 @csrf_exempt
 def stations(request):
     if request.method == 'GET':
-        stations = list(ChargingStation.objects.values())
+        stations = list(ChargingStation.objects.values(
+            'id', 'name', 'area', 'connector', 'speed',
+            'slots_total', 'slots_booked', 'approx_rate',
+            'open_now', 'is_available', 'image_url'
+        ))
         return JsonResponse({'stations': stations})
-
 @csrf_exempt  
 def search_stations(request):
     if request.method == 'GET':

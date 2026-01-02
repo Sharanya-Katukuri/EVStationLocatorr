@@ -14,6 +14,23 @@ class UserProfile(models.Model):
 #adding new
 
 
+# class ChargingStation(models.Model):
+#     name = models.CharField(max_length=100)
+#     area = models.CharField(max_length=100)
+#     connector = models.CharField(max_length=20)
+#     speed = models.CharField(max_length=20, choices=[('Fast', 'Fast'), ('Normal', 'Normal')])
+#     slots_total = models.IntegerField(default=6)
+#     slots_booked = models.IntegerField(default=0)
+#     approx_rate = models.DecimalField(max_digits=6, decimal_places=2)
+#     open_now = models.BooleanField(default=True)
+#     image_url = models.URLField(blank=True, null=True)
+
+#     def __str__(self):
+#         return self.name
+
+# ev_booking/models.py
+
+#01
 class ChargingStation(models.Model):
     name = models.CharField(max_length=100)
     area = models.CharField(max_length=100)
@@ -23,10 +40,15 @@ class ChargingStation(models.Model):
     slots_booked = models.IntegerField(default=0)
     approx_rate = models.DecimalField(max_digits=6, decimal_places=2)
     open_now = models.BooleanField(default=True)
+
+    # ⭐ NEW: admin toggle for “Available / Not available”
+    is_available = models.BooleanField(default=True)
+
     image_url = models.URLField(blank=True, null=True)
 
     def __str__(self):
         return self.name
+
 
 class Booking(models.Model):
     user_name = models.CharField(max_length=100)

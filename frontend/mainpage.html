@@ -698,9 +698,9 @@
       </div>
     </div>
   </section>
-
+#03
   <!-- STATIONS LIST -->
-  <section id="stations">
+  <!-- <section id="stations">
     <div class="container">
       <div class="section-header">
         <h2>Available stations</h2>
@@ -708,7 +708,22 @@
       </div>
       <div class="card-grid" id="stationCards"></div>
     </div>
-  </section>
+  </section> -->
+
+  <section id="stations">
+  <div class="container">
+    <div class="section-header">
+      <h2>Available stations</h2>
+      <p>Pick an available station to go to slot booking.</p>
+    </div>
+
+    <!-- ⭐ NEW stations list -->
+    <div id="stationList" class="card-grid">
+      <!-- JS will inject each station card here -->
+    </div>
+  </div>
+</section>
+
 
   <!-- LOCATOR + MAP -->
   <section id="locator">
@@ -1108,102 +1123,221 @@
 
   
   <!-- JAVASCRIPT -->
-  <script>
+<script>
 // ======================================
 // SUPER EASY DJANGO CONNECTION (BEGINNER)
 // ======================================
 
 const API_URL = 'http://127.0.0.1:8000/api/';
 
-// ⭐ 1. SIMPLE API CALL FUNCTION (COPY THIS)
+// ⭐ 1. SIMPLE API CALL FUNCTION
 function apiCall(url, method='GET', data=null) {
-    return fetch(url, {
+    return fetch("http://127.0.0.1:8000/api/accounts/stations/", {
         method: method,
         headers: {'Content-Type': 'application/json'},
         body: data ? JSON.stringify(data) : null
     })
-    .then(res => res.json())
-    .catch(err => ({success: false, message: 'Server error'}));
+    .then(function(res) { return res.json(); })
+    .catch(function(err) {
+        console.log('Server error:', err);
+        return {success: false};
+    });
 }
 
 // ⭐ 2. LOAD STATIONS FROM DB
+
+/* ======================================
+   LOAD AVAILABLE STATIONS FROM DJANGO
+   ====================================== */
+
+const STATIONS_API = "http://127.0.0.1:8000/api/accounts/stations/";
+
+/* FETCH + RENDER STATIONS */
 function loadStations() {
-    apiCall(API_URL + 'stations/')
+  fetch(STATIONS_API)
+    .then(res => res.json())
     .then(data => {
-        if (data.stations) renderStations(data.stations);
+      const list = document.getElementById("stationList");
+      list.innerHTML = "";
+
+      if (!data.stations || data.stations.length === 0) {
+        list.innerHTML = "<p class='small-text'>No stations found.</p>";
+        return;
+      }
+
+      data.stations.forEach(station => {
+        if (station.is_available !== true) return;
+
+        const freeSlots = station.slots_total - station.slots_booked;
+
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+          <img src="${station.image_url}" alt="${station.name}">
+          <div class="card-body">
+            <div class="card-title-row">
+              <h4 style="font-size:1rem;">${station.name}</h4>
+              <span class="status-dot status-online"></span>
+            </div>
+
+            <p class="small-text">${station.area}</p>
+
+            <div class="card-tags">
+              <span class="tag-pill">${station.connector}</span>
+              <span class="tag-pill">${station.speed}</span>
+              <span class="tag-pill">${freeSlots} free slots</span>
+              <span class="tag-pill">₹${station.approx_rate}</span>
+            </div>
+
+            <div class="card-foot">
+              <span class="small-text">Open now</span>
+              <span class="small-text">Available</span>
+            </div>
+          </div>
+        `;
+
+        list.appendChild(card);
+      });
+    })
+    .catch(err => {
+      console.error("Error loading stations:", err);
     });
 }
 
-// ⭐ 3. RENDER STATIONS (YOUR SAME CODE)
-function renderStations(stations) {
-    const cards = document.getElementById('stationCards');
-    const select = document.getElementById('bookingStation');
-    cards.innerHTML = ''; select.innerHTML = '';
-    
-    stations.forEach(s => {
-        const free = s.slots_total - s.slots_booked;
-        cards.innerHTML += `
-            <div class="card">
-                <img src="${s.image_url || 'https://images.pexels.com/photos/7994432/pexels-photo-7994432.jpeg'}" alt="${s.name}">
-                <div class="card-body">
-                    <div class="card-title-row">
-                        <h4>${s.name}</h4>
-                        <span class="status-dot ${s.open_now ? 'status-online' : 'status-busy'}"></span>
-                    </div>
-                    <p class="small-text">${s.area}</p>
-                    <div class="card-tags">
-                        <span class="tag-pill">${s.connector}</span>
-                        <span class="tag-pill">${s.speed}</span>
-                        <span class="tag-pill">${s.slots_total} slots</span>
-                        <span class="tag-pill">₹${s.approx_rate}</span>
-                    </div>
-                    <div class="card-foot">
-                        <span>${free} free</span>
-                        <span>${s.open_now ? 'Open' : 'Closed'}</span>
-                    </div>
-                </div>
-            </div>`;
-        
-        select.innerHTML += `<option value="${s.id}">${s.name} (${s.area})</option>`;
-    });
-}
+/* START */
+window.onload = function () {
+  loadStations();
 
-// ⭐ 4. SEARCH STATIONS
-document.getElementById('locatorBtn').onclick = function() {
-    const q = document.getElementById('searchArea').value;
-    const connector = document.getElementById('connectorFilter').value;
-    const speed = document.getElementById('speedFilter').value;
-    const open = document.getElementById('openNowFilter').checked;
-    
-    let url = API_URL + 'search-stations/?';
-    if (q) url += 'q=' + q + '&';
-    if (connector != 'any') url += 'connector=' + connector + '&';
-    if (speed != 'any') url += 'speed=' + speed + '&';
-    if (open) url += 'open_now=true';
-    
-    apiCall(url).then(data => {
-        document.getElementById('locatorResult').textContent = 
-            `Found ${data.stations?.length || 0} stations`;
-    });
+  document.getElementById("navToggle").onclick = function () {
+    document.getElementById("navLinks").classList.toggle("open");
+  };
 };
 
-// ⭐ 5. BOOK SLOT
+
+
+// ⭐ 3. RENDER STATIONS (image + name + location + availability + click)
+function renderStations(stations) {
+    var list = document.getElementById('stationList');
+    var bookingSelect = document.getElementById('bookingStation');
+    list.innerHTML = '';
+    bookingSelect.innerHTML = '';
+
+    stations.forEach(function(s) {
+        var free = s.slots_total - s.slots_booked;
+
+        // Create card div
+        var card = document.createElement('div');
+        card.className = 'card';
+
+        // availability text + color
+        var availableText = s.is_available ? 'Available' : 'Not available';
+        var availableClass = s.is_available ? 'status-online' : 'status-busy';
+
+        card.innerHTML =
+            '<img src="' + (s.image_url || "https://images.pexels.com/photos/7994432/pexels-photo-7994432.jpeg") + '" alt="' + s.name + '">' +
+            '<div class="card-body">' +
+              '<div class="card-title-row">' +
+                '<h4 style="font-size:1rem;">' + s.name + '</h4>' +
+                '<span class="status-dot ' + availableClass + '"></span>' +
+              '</div>' +
+              '<p class="small-text">' + s.area + '</p>' +
+              '<div class="card-tags">' +
+                '<span class="tag-pill">' + s.connector + '</span>' +
+                '<span class="tag-pill">' + s.speed + '</span>' +
+                '<span class="tag-pill">' + s.slots_total + ' slots</span>' +
+                '<span class="tag-pill">₹' + s.approx_rate + '/kWh</span>' +
+              '</div>' +
+              '<div class="card-foot">' +
+                '<span class="small-text">' + free + ' free slot(s)</span>' +
+                '<span class="small-text">' + availableText + '</span>' +
+              '</div>' +
+            '</div>';
+
+        // ⭐ when card clicked
+        card.onclick = function() {
+            if (!s.is_available) {
+                alert('This station is marked as NOT AVAILABLE right now.');
+                return;
+            }
+            // 1) select this station in booking dropdown
+            bookingSelect.value = s.id;
+
+            // 2) smooth scroll to booking section
+            var bookingSection = document.getElementById('booking');
+            bookingSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        };
+
+        list.appendChild(card);
+
+        // Fill booking dropdown too
+        var opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name + " (" + s.area + ")";
+        bookingSelect.appendChild(opt);
+    });
+}
+
+// ⭐ 4. SEARCH STATIONS (optional - same style)
+// document.getElementById('locatorBtn').onclick = function() {
+//     var q = document.getElementById('searchArea').value;
+//     var connector = document.getElementById('connectorFilter').value;
+//     var speed = document.getElementById('speedFilter').value;
+//     var open = document.getElementById('openNowFilter').checked;
+
+//     var url = API_URL + 'search-stations/?';
+//     if (q) url += 'q=' + encodeURIComponent(q) + '&';
+//     if (connector != 'any') url += 'connector=' + connector + '&';
+//     if (speed != 'any') url += 'speed=' + speed + '&';
+//     if (open) url += 'open_now=true';
+
+//     apiCall(url).then(function(data) {
+//         var count = (data.stations && data.stations.length) ? data.stations.length : 0;
+//         document.getElementById('locatorResult').textContent = 'Found ' + count + ' stations';
+//         if (data.stations) {
+//             renderStations(data.stations);
+//         }
+//     });
+// };
+document.getElementById('locatorBtn').onclick = function () {
+    // Example count (since backend filter not used now)
+    const foundCount = document.querySelectorAll('#stationList .card').length;
+
+    // 1️⃣ Show result text
+    document.getElementById('locatorResult').textContent =
+        "Found " + foundCount + " available station(s). Showing below ↓";
+
+    // 2️⃣ Scroll to Available Stations section
+    document.getElementById('stations')
+        .scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // 3️⃣ Optional highlight effect
+    const cards = document.getElementById('stationList');
+    cards.style.boxShadow = "0 0 0 2px #22c55e";
+    setTimeout(() => {
+        cards.style.boxShadow = "none";
+    }, 1200);
+};
+
+
+
+// ⭐ 5. BOOK SLOT (same pattern you already use)
 document.getElementById('bookingForm').onsubmit = function(e) {
     e.preventDefault();
-    
-    const data = {
+
+    var data = {
         user_name: document.getElementById('userName').value,
         vehicle: document.getElementById('userVehicle').value,
-        // station_id: document.getElementById('bookingStation').value,
+        station_id: document.getElementById('bookingStation').value,
         connector: document.getElementById('bookingConnector').value,
         date: document.getElementById('bookingDate').value,
         time: document.getElementById('bookingTime').value,
         duration: document.getElementById('bookingDuration').value,
         approx_amount: 150
     };
-    
-    apiCall(API_URL + 'bookings/', 'POST', data).then(result => {
-        const status = document.getElementById('bookingStatus');
+
+    apiCall(API_URL + 'bookings/', 'POST', data).then(function(result) {
+        var status = document.getElementById('bookingStatus');
         status.textContent = result.message;
         status.style.color = result.success ? '#22c55e' : '#f97316';
     });
@@ -1211,31 +1345,33 @@ document.getElementById('bookingForm').onsubmit = function(e) {
 
 // ⭐ 6. LOAD BOOKINGS
 function loadBookings() {
-    apiCall(API_URL + 'my-bookings/').then(data => {
-        const list = document.getElementById('bookingList');
+    apiCall(API_URL + 'my-bookings/').then(function(data) {
+        var list = document.getElementById('bookingList');
         list.innerHTML = '';
-        data.bookings?.forEach(b => {
-            list.innerHTML += `
-                <div class="booking-item">
-                    ${b.station_id} - ${b.date} ${b.time} - ₹${b.approx_amount}
-                </div>`;
+        if (!data.bookings) return;
+        data.bookings.forEach(function(b) {
+            list.innerHTML +=
+                '<div class="booking-item">' +
+                b.station_id + ' - ' + b.date + ' ' + b.time + ' - ₹' + b.approx_amount +
+                '</div>';
         });
     });
 }
 
 // ⭐ 7. LOAD REVIEWS
 function loadReviews() {
-    apiCall(API_URL + 'get-reviews/').then(data => {
-        const list = document.getElementById('reviewList');
+    apiCall(API_URL + 'get-reviews/').then(function(data) {
+        var list = document.getElementById('reviewList');
         list.innerHTML = '';
-        data.reviews?.forEach(r => {
-            const stars = '★'.repeat(r.rating) + '☆'.repeat(5-r.rating);
-            list.innerHTML += `
-                <div class="review-item">
-                    <div class="review-stars">${stars}</div>
-                    <strong>${r.name}</strong>
-                    <p class="small-text">${r.text}</p>
-                </div>`;
+        if (!data.reviews) return;
+        data.reviews.forEach(function(r) {
+            var stars = '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating);
+            list.innerHTML +=
+                '<div class="review-item">' +
+                    '<div class="review-stars">' + stars + '</div>' +
+                    '<strong>' + r.name + '</strong>' +
+                    '<p class="small-text">' + r.text + '</p>' +
+                '</div>';
         });
     });
 }
@@ -1243,27 +1379,27 @@ function loadReviews() {
 // ⭐ 8. ADD REVIEW
 document.getElementById('reviewForm').onsubmit = function(e) {
     e.preventDefault();
-    const data = {
+    var data = {
         name: document.getElementById('reviewName').value,
         rating: document.getElementById('reviewRating').value,
         text: document.getElementById('reviewText').value
     };
-    apiCall(API_URL + 'reviews/', 'POST', data).then(result => {
+    apiCall(API_URL + 'reviews/', 'POST', data).then(function(result) {
         document.getElementById('reviewStatus').textContent = result.message;
         loadReviews();
-        this.reset();
+        document.getElementById('reviewForm').reset();
     });
 };
 
 // ⭐ 9. CONTACT FORM
 document.getElementById('contactForm').onsubmit = function(e) {
     e.preventDefault();
-    const data = {
+    var data = {
         name: document.getElementById('contactName').value,
         email: document.getElementById('contactEmail').value,
         message: document.getElementById('contactMessage').value
     };
-    apiCall(API_URL + 'contact/', 'POST', data).then(result => {
+    apiCall(API_URL + 'contact/', 'POST', data).then(function(result) {
         document.getElementById('contactResult').textContent = result.message;
     });
 };
@@ -1271,8 +1407,8 @@ document.getElementById('contactForm').onsubmit = function(e) {
 // ⭐ 10. NEWSLETTER
 document.getElementById('newsletterForm').onsubmit = function(e) {
     e.preventDefault();
-    const data = {email: document.getElementById('newsletterEmail').value};
-    apiCall(API_URL + 'newsletter/', 'POST', data).then(result => {
+    var data = { email: document.getElementById('newsletterEmail').value };
+    apiCall(API_URL + 'newsletter/', 'POST', data).then(function(result) {
         document.getElementById('newsletterResult').textContent = result.message;
     });
 };
@@ -1282,12 +1418,13 @@ window.onload = function() {
     loadStations();
     loadReviews();
     loadBookings();
-    
+
     // Navbar toggle (your old code)
-    document.getElementById('navToggle').onclick = () => {
+    document.getElementById('navToggle').onclick = function() {
         document.getElementById('navLinks').classList.toggle('open');
     };
 };
 </script>
+
 </body>
 </html>
