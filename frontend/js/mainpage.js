@@ -1,15 +1,19 @@
 // ======================================
-// FINAL FIXED DJANGO FRONTEND SCRIPT
+// FINAL CLEAN & WORKING FRONTEND SCRIPT
 // ======================================
 
 const BASE_URL = "http://127.0.0.1:8000/api/accounts/";
+const STATIONS_API = BASE_URL + "stations/";
+const INITIAL_LIMIT = 8;
+
+let ALL_STATIONS = [];
 
 // --------------------------------------
 // 1️⃣ COMMON API CALL FUNCTION
 // --------------------------------------
 function apiCall(endpoint, method = "GET", data = null) {
   return fetch(BASE_URL + endpoint, {
-    method: method,
+    method,
     headers: { "Content-Type": "application/json" },
     body: data ? JSON.stringify(data) : null
   })
@@ -20,59 +24,42 @@ function apiCall(endpoint, method = "GET", data = null) {
     });
 }
 
-
-const STATIONS_API = "http://127.0.0.1:8000/api/accounts/stations/";
-let ALL_STATIONS = [];
-
-/* FETCH + RENDER STATIONS */
+// --------------------------------------
+// 2️⃣ LOAD STATIONS (ONLY 8 ON PAGE LOAD)
+// --------------------------------------
 function loadStations() {
   fetch(STATIONS_API)
     .then(res => res.json())
     .then(data => {
-      ALL_STATIONS = data.stations || [];
-      renderStations(ALL_STATIONS); // show all initially
+      // keep only available stations
+      ALL_STATIONS = (data.stations || []).filter(s => s.is_available);
+
+      // show only first 8 initially
+      renderStations(ALL_STATIONS.slice(0, INITIAL_LIMIT));
     })
-    .catch(err => {
-      console.error("Error loading stations:", err);
-    });
+    .catch(err => console.error("Station load error:", err));
 }
 
-function openHelpPage() {
-    window.location.href = "help.html";
-  }
-
-
-/* START */
-window.onload = function () {
-  loadStations();
-
-  document.getElementById("navToggle").onclick = function () {
-    document.getElementById("navLinks").classList.toggle("open");
-  };
-};
-
-
-
-// ⭐ 3. RENDER STATIONS (image + name + location + availability + click)
+// --------------------------------------
+// 3️⃣ RENDER STATIONS
+// --------------------------------------
 function renderStations(stations) {
   const list = document.getElementById("stationList");
   list.innerHTML = "";
 
-  if (stations.length === 0) {
+  if (!stations.length) {
     list.innerHTML = "<p class='small-text'>No stations found.</p>";
     return;
   }
 
   stations.forEach(station => {
-    if (!station.is_available) return;
-
     const freeSlots = station.slots_total - station.slots_booked;
 
     const card = document.createElement("div");
     card.className = "card";
 
     card.innerHTML = `
-      <img src="${station.image_url}" alt="${station.name}">
+      <img src="${station.image_url || ''}" alt="${station.name}">
       <div class="card-body">
         <div class="card-title-row">
           <h4>${station.name}</h4>
@@ -89,7 +76,7 @@ function renderStations(stations) {
         </div>
 
         <div class="card-foot">
-          <span class="small-text">Open now</span>
+          <span class="small-text">${station.open_now ? "Open now" : "Closed"}</span>
           <span class="small-text">Available</span>
         </div>
       </div>
@@ -98,117 +85,71 @@ function renderStations(stations) {
     list.appendChild(card);
   });
 }
+function openHelpPage() { window.location.href = "help.html"; }
 
-document.getElementById("locatorBtn").addEventListener("click", function () {
-  const area = document.getElementById("searchArea").value.toLowerCase();
-  const connector = document.getElementById("connectorFilter").value;
-  const speed = document.getElementById("speedFilter").value;
-  const openNow = document.getElementById("openNowFilter").checked;
+// --------------------------------------
+// 4️⃣ SEARCH + FILTER STATIONS (SHOW ALL)
+// --------------------------------------
+document.getElementById("locatorBtn").onclick = function () {
+  const area = searchArea.value.toLowerCase();
+  const connector = connectorFilter.value;
+  const speed = speedFilter.value;
+  const openNow = openNowFilter.checked;
 
-  const filteredStations = ALL_STATIONS.filter(station => {
-
-    // 1️⃣ Area filter
-    if (area && !station.area.toLowerCase().includes(area)) {
-      return false;
-    }
-
-    // 2️⃣ Connector filter
-    if (connector !== "any" && station.connector !== connector) {
-      return false;
-    }
-
-    // 3️⃣ Speed filter
-    if (speed !== "any" && station.speed !== speed) {
-      return false;
-    }
-
-    // 4️⃣ Open now filter
-    if (openNow && !station.open_now) {
-      return false;
-    }
-
+  const filtered = ALL_STATIONS.filter(station => {
+    if (area && !station.area.toLowerCase().includes(area)) return false;
+    if (connector !== "any" && station.connector !== connector) return false;
+    if (speed !== "any" && station.speed !== speed) return false;
+    if (openNow && !station.open_now) return false;
     return true;
   });
 
-  renderStations(filteredStations);
+  renderStations(filtered);
 
-  document.getElementById("locatorResult").textContent =
-    `${filteredStations.length} station(s) found`;
-});
-window.addEventListener("DOMContentLoaded", loadStations);
+  locatorResult.textContent =
+    `Found ${filtered.length} available station(s). Showing below ↓`;
 
-
-// ⭐ 4. SEARCH STATIONS (optional - same style)
-
-document.getElementById('locatorBtn').onclick = function () {
-    // Example count (since backend filter not used now)
-    const foundCount = document.querySelectorAll('#stationList .card').length;
-
-    // 1️⃣ Show result text
-    document.getElementById('locatorResult').textContent =
-        "Found " + foundCount + " available station(s). Showing below ↓";
-
-    // 2️⃣ Scroll to Available Stations section
-    document.getElementById('stations')
-        .scrollIntoView({ behavior: "smooth", block: "start" });
-
-    // 3️⃣ Optional highlight effect
-    const cards = document.getElementById('stationList');
-    cards.style.boxShadow = "0 0 0 2px #22c55e";
-    setTimeout(() => {
-        cards.style.boxShadow = "none";
-    }, 1200);
+  document.getElementById("stations")
+    .scrollIntoView({ behavior: "smooth", block: "start" });
 };
-// Get elements
+
+// --------------------------------------
+// 5️⃣ BOOKING LOGIC
+// --------------------------------------
 const bookingForm = document.getElementById("bookingForm");
 const bookingStatus = document.getElementById("bookingStatus");
 const bookingList = document.getElementById("bookingList");
-const paymentBtn = document.getElementById("paymentBtn"); // ✅ IMPORTANT
+const paymentBtn = document.getElementById("paymentBtn");
 
-// --------------------------------------
-// 5️⃣ BOOK SLOT
-// --------------------------------------
 bookingForm.onsubmit = function (e) {
   e.preventDefault();
 
   const data = {
-    user_name: document.getElementById("userName").value,
-    vehicle: document.getElementById("userVehicle").value,
-    connector: document.getElementById("bookingConnector").value,
-    date: document.getElementById("bookingDate").value,
-    time: document.getElementById("bookingTime").value,
-    duration: Number(document.getElementById("bookingDuration").value),
+    user_name: userName.value,
+    vehicle: userVehicle.value,
+    connector: bookingConnector.value,
+    date: bookingDate.value,
+    time: bookingTime.value,
+    duration: Number(bookingDuration.value),
     approx_amount: 150
   };
 
-  apiCall("bookings/", "POST", data)
-    .then(res => {
+  apiCall("bookings/", "POST", data).then(res => {
+    if (res.success) {
+      bookingStatus.textContent = "Booking created!";
+      bookingStatus.style.color = "#22c55e";
+      localStorage.setItem("bookingDone", "true");
+      paymentBtn.style.display = "block";
+      loadBookings();
+    } else {
       bookingStatus.textContent = res.message;
-      bookingStatus.style.color = res.success ? "green" : "red";
-
-     if (res.success) {
-  bookingStatus.textContent = "Booking created!";
-  bookingStatus.style.color = "#22c55e";
-
-  // ✅ Store booking flag
-  localStorage.setItem("bookingDone", "true");
-
-  paymentBtn.style.display = "block";
-  loadBookings();
-}
-
-    })
-    .catch(() => {
-      bookingStatus.textContent = "Booking failed";
       bookingStatus.style.color = "red";
-    });
+    }
+  });
 };
 
 // --------------------------------------
-// 6️⃣ LOAD BOOKINGS
-// --------------------------------------
-// --------------------------------------
-// 6️⃣ LOAD BOOKINGS
+// 6️⃣ LOAD BOOKINGS (UI ONLY)
 // --------------------------------------
 function loadBookings() {
   bookingList.innerHTML = `
@@ -218,18 +159,15 @@ function loadBookings() {
   `;
 }
 
-
-
 // --------------------------------------
-// 7️⃣ PAYMENT BUTTON CLICK
+// 7️⃣ PAYMENT BUTTON
 // --------------------------------------
 paymentBtn.onclick = function () {
   window.location.href = "payment.html";
 };
 
-
 // --------------------------------------
-//  8️⃣LOAD REVIEWS
+// 8️⃣ LOAD REVIEWS
 // --------------------------------------
 function loadReviews() {
   apiCall("get-reviews/").then(data => {
@@ -247,19 +185,17 @@ function loadReviews() {
 }
 
 // --------------------------------------
-//9️⃣ ADD REVIEW
+// 9️⃣ ADD REVIEW
 // --------------------------------------
 reviewForm.onsubmit = function (e) {
   e.preventDefault();
-
   apiCall("reviews/", "POST", {
     name: reviewName.value,
     rating: reviewRating.value,
     text: reviewText.value
-  }).then(res => {
-    reviewStatus.textContent = res.message;
-    loadReviews();
+  }).then(() => {
     reviewForm.reset();
+    loadReviews();
   });
 };
 
@@ -268,7 +204,6 @@ reviewForm.onsubmit = function (e) {
 // --------------------------------------
 contactForm.onsubmit = function (e) {
   e.preventDefault();
-
   apiCall("contact/", "POST", {
     name: contactName.value,
     email: contactEmail.value,
@@ -281,21 +216,20 @@ contactForm.onsubmit = function (e) {
 // --------------------------------------
 newsletterForm.onsubmit = function (e) {
   e.preventDefault();
-
   apiCall("newsletter/", "POST", {
     email: newsletterEmail.value
   }).then(res => newsletterResult.textContent = res.message);
 };
 
 // --------------------------------------
-// 1️⃣2️⃣ START APP
+// 1️⃣2️⃣ APP START (ONLY ONE ONLOAD)
 // --------------------------------------
 window.onload = function () {
   loadStations();
   loadBookings();
   loadReviews();
 
-  navToggle.onclick = function () {
-    navLinks.classList.toggle("open");
-  };
+  if (navToggle) {
+    navToggle.onclick = () => navLinks.classList.toggle("open");
+  }
 };
