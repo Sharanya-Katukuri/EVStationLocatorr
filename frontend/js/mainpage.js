@@ -2,7 +2,7 @@
 // FINAL CLEAN & WORKING FRONTEND SCRIPT
 // ======================================
 
-const BASE_URL = "http://127.0.0.1:8000/api/accounts/";
+const BASE_URL = "https://evstationlocator.onrender.com/api/accounts/";
 const STATIONS_API = BASE_URL + "stations/";
 const INITIAL_LIMIT = 8;
 

@@ -1,5 +1,5 @@
 function register() {
-  fetch("http://127.0.0.1:8000/api/accounts/register/", {
+  fetch("https://evstationlocator.onrender.com/api/accounts/register/", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
