@@ -85,7 +85,7 @@ function renderStations(stations) {
     list.appendChild(card);
   });
 }
-function openHelpPage() { window.location.href = "help.html"; }
+function openHelpPage() { window.location.href ="help.html"; }
 
 // --------------------------------------
 // 4️⃣ SEARCH + FILTER STATIONS (SHOW ALL)
